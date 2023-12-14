@@ -82,6 +82,8 @@ def main():
     exclude_dirs = get_config('skipDirs')
     dir_list = [f for f in os.listdir(ftp_root) if os.path.isdir(os.path.join(ftp_root, f)) and f not in exclude_dirs]
     last_reviewed_filename = os.path.join(Path(__file__).parents[1], get_config('userLastReviewedName'))
+    incoming_name = get_config('incomingDir')
+    outgoing_name = get_config('outgoingDir')
     tg_api_key = get_config('telegramAPIKey')
     tg_id = get_config('telegramID')
     archive_days = get_config('archiveAfterDays')
@@ -97,7 +99,7 @@ def main():
         last_reviewed = get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format)
 
         # incoming files to the SFTP server
-        incoming_dir = os.path.join(user_dir, 'ToHuntHome')
+        incoming_dir = os.path.join(user_dir, incoming_name)
         incoming_files = [
             f for f in os.listdir(incoming_dir)
             if os.path.isfile(os.path.join(incoming_dir, f))
@@ -112,12 +114,12 @@ def main():
                 cde = resp.status_code
                 if cde == 200:
                     for f in incoming_files:
-                        logging.info(f'ToHuntHome|{ftp_user}|{f}')
+                        logging.info(f'{incoming_name}|{ftp_user}|{f}')
                 else:
                     logging.error(f'Incoming File Telegram Notification Failed: Response Code {cde}')
 
         # outgoing files to the SFTP server
-        outgoing_dir = os.path.join(user_dir, 'FromHuntHome')
+        outgoing_dir = os.path.join(user_dir, outgoing_name)
         outgoing_files = [
             f for f in os.listdir(outgoing_dir)
             if os.path.isfile(os.path.join(outgoing_dir, f))
@@ -134,12 +136,12 @@ def main():
                     cde = resp.status_code
                     if cde == 200:
                         for f in outgoing_files:
-                            logging.info(f'FromHuntHome|{ftp_user}|{f}')
+                            logging.info(f'{outgoing_name}|{ftp_user}|{f}')
                     else:
                         logging.error(f'Outgoing File Telegram Notification Failed: Response Code {cde}')
             else:
                 for f in outgoing_files:
-                    logging.info(f'FromHuntHome|{ftp_user}|{f}')
+                    logging.info(f'{outgoing_name}|{ftp_user}|{f}')
 
         # update temp file
         with open(temp_file, mode='a', newline='', encoding='utf-8') as lr:
