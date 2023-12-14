@@ -3,5 +3,8 @@
     "rootDir": "F:/root",
     "archiveRootDir": "G:/Archive",
     "skipDirs": ["$RECYCLE.BIN", "System Volume Information", "zINACTIVE"],
-    "archiveAfterDays": 3
+    "archiveAfterDays": 3,
+	"userLastReviewedName": "user_last_reviewed.csv",
+    "telegramAPIKey": "1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "telegramID": "9876543210"
 }

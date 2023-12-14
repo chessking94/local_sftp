@@ -2,3 +2,5 @@
 .vscode
 __pycache__
 config.json
+test.py
+user_last_reviewed.csv
