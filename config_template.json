@@ -1,0 +1,7 @@
+{
+    "logRoot": "C:/logs",
+    "rootDir": "F:/root",
+    "archiveRootDir": "G:/Archive",
+    "skipDirs": ["$RECYCLE.BIN", "System Volume Information", "zINACTIVE"],
+    "archiveAfterDays": 3
+}
