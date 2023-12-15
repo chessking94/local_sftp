@@ -50,7 +50,8 @@ def get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format):
                 inner_dict = {header: value for header, value in zip(headers[1:], row[1:])}
                 nested_dict[key] = inner_dict
 
-    date_val = nested_dict.get(ftp_user)
+    user_info = nested_dict.get(ftp_user)
+    date_val = user_info.get('Last_Reviewed_Timestamp')
     if date_val is None:
         archive_days = get_config('archiveAfterDays')
         date_val = dt.datetime.now() - dt.timedelta(days=archive_days)  # default to number of days files can live on SFTP
@@ -127,8 +128,8 @@ def main():
         ]
         outgoing_file_ct = len(outgoing_files)
         if outgoing_file_ct > 0:
-            send_tg = False
-            if send_tg:
+            send_outgoing_tg = False
+            if send_outgoing_tg:
                 msg = f'A total of {outgoing_file_ct} new file(s) are available for download on the HuntHome SFTP and will accessible for {archive_days} days'
                 url = f'https://api.telegram.org/bot{tg_api_key}'
                 params = {'chat_id': '', 'text': msg}  # TODO: End user would need to provide their own Telegram chat_id and it gets logged somewher
