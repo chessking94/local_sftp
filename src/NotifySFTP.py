@@ -98,6 +98,7 @@ def main():
     for ftp_user in dir_list:
         user_dir = os.path.join(ftp_root, ftp_user)
         last_reviewed = get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format)
+        new_reviewed = dt.datetime.now()
 
         # incoming files to the SFTP server
         incoming_dir = os.path.join(user_dir, incoming_name)
@@ -146,7 +147,7 @@ def main():
 
         # update temp file
         with open(temp_file, mode='a', newline='', encoding='utf-8') as lr:
-            lr.write(f'"{ftp_user}","{dt.datetime.strftime(last_reviewed, date_format)}"\n')
+            lr.write(f'"{ftp_user}","{dt.datetime.strftime(new_reviewed, date_format)}"\n')
 
     # replace original user_last_reviewed.csv with temp file
     shutil.move(temp_file, last_reviewed_filename)
