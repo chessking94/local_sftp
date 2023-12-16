@@ -11,9 +11,12 @@ import sys
 import tempfile
 import traceback
 
+import pandas as pd
+import pyodbc as sql
 import requests
 
 
+# TODO: Look into pivoting to Automation library
 def get_config(key):
     filename = os.path.join(Path(__file__).parents[1], 'config.json')
     with open(filename, 'r') as t:
@@ -61,6 +64,38 @@ def get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format):
     return date_val
 
 
+def insert_sftpfiles(conn, username, directory, filename):
+    id_qry = f"SELECT DirectoryID FROM sftp.Directories WHERE DirectoryPath = '/{directory}'"
+    logging.debug(id_qry)
+    df = pd.read_sql(id_qry, conn)
+    idval = None
+    if len(df) == 0:
+        logging.critical(f"unable to locate DirectoryID for directory '{directory}'")
+    else:
+        idval = int(df.values[0][0])
+
+    if idval is not None:
+        csr = conn.cursor()
+        insert_qry = f"INSERT INTO sftp.Files (Username, DirectoryID, Filename) VALUES ('{username}', '{idval}', '{filename}')"
+        logging.debug(insert_qry)
+        csr.execute(insert_qry)
+        conn.commit()
+
+        logging.info(f'{username}|{directory}|{filename}')
+
+
+def get_telegramid(conn, username):
+    id_qry = f"SELECT TelegramChatID FROM sftp.Logins WHERE Username = '{username}'"
+    logging.debug(id_qry)
+    df = pd.read_sql(id_qry, conn)
+    rtn = None
+    if len(df) == 0:
+        logging.critical(f"no record for username '{username}'")
+    else:
+        rtn = df.values[0][0]
+    return rtn
+
+
 def main():
     script_name = Path(__file__).stem
     log_root = get_config('logRoot')
@@ -90,6 +125,9 @@ def main():
     archive_days = get_config('archiveAfterDays')
     date_format = '%m/%d/%Y %H:%M'
 
+    conn_str = get_config('connectionString_sftpdb')
+    DBCONN = sql.connect(conn_str)
+
     # create temp file; this will be a two column csv with the SFTP username and when the directory was last checked for files
     temp_file = tempfile.NamedTemporaryFile(delete=False).name
     with open(temp_file, mode='w', newline='', encoding='utf-8') as lr:
@@ -116,7 +154,7 @@ def main():
                 cde = resp.status_code
                 if cde == 200:
                     for f in incoming_files:
-                        logging.info(f'{incoming_name}|{ftp_user}|{f}')
+                        insert_sftpfiles(conn=DBCONN, username=ftp_user, directory=incoming_name, filename=f)
                 else:
                     logging.error(f'Incoming File Telegram Notification Failed: Response Code {cde}')
 
@@ -129,21 +167,21 @@ def main():
         ]
         outgoing_file_ct = len(outgoing_files)
         if outgoing_file_ct > 0:
-            send_outgoing_tg = False
-            if send_outgoing_tg:
+            user_chat_id = get_telegramid(conn=DBCONN, username=ftp_user)
+            if user_chat_id is not None:
                 msg = f'A total of {outgoing_file_ct} new file(s) are available for download on the HuntHome SFTP and will accessible for {archive_days} days'
                 url = f'https://api.telegram.org/bot{tg_api_key}'
-                params = {'chat_id': '', 'text': msg}  # TODO: End user would need to provide their own Telegram chat_id and it gets logged somewher
+                params = {'chat_id': user_chat_id, 'text': msg}
                 with requests.post(url + '/sendMessage', params=params) as resp:
                     cde = resp.status_code
                     if cde == 200:
                         for f in outgoing_files:
-                            logging.info(f'{outgoing_name}|{ftp_user}|{f}')
+                            insert_sftpfiles(conn=DBCONN, username=ftp_user, directory=outgoing_name, filename=f)
                     else:
                         logging.error(f'Outgoing File Telegram Notification Failed: Response Code {cde}')
             else:
                 for f in outgoing_files:
-                    logging.info(f'{outgoing_name}|{ftp_user}|{f}')
+                    insert_sftpfiles(conn=DBCONN, username=ftp_user, directory=outgoing_name, filename=f)
 
         # update temp file
         with open(temp_file, mode='a', newline='', encoding='utf-8') as lr:

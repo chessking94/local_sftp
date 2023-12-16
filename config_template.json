@@ -8,5 +8,6 @@
     "outgoingDir": "Outgoing",
 	"userLastReviewedName": "user_last_reviewed.csv",
     "telegramAPIKey": "1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    "telegramID": "9876543210"
+    "telegramID": "9876543210",
+    "connectionString_sftpdb": "Driver={ODBC Driver 17 for SQL Server};Server=localhost;Database=sftpdb;Trusted_Connection=yes;"
 }
