@@ -1,34 +1,18 @@
 import datetime as dt
-import json
 import logging
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
-import traceback
 
+from automation import misc
 
-def get_config(key):
-    filename = os.path.join(Path(__file__).parents[1], 'config.json')
-    with open(filename, 'r') as t:
-        key_data = json.load(t)
-    val = key_data.get(key)
-    return val
-
-
-def log_exception(exctype, value, tb):
-    write_val = {
-        'type': re.sub(r'<|>', '', str(exctype)),  # remove < and > since it messes up converting to HTML for potential email notifications
-        'description': str(value),
-        'traceback': str(traceback.format_tb(tb, 10))
-    }
-    logging.critical(str(write_val))
+CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 
 
 def main():
     script_name = Path(__file__).stem
-    log_root = get_config('logRoot')
+    log_root = misc.get_config('logRoot', CONFIG_FILE)
 
     dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
     log_name = f'{script_name}_{dte}.log'
@@ -42,12 +26,12 @@ def main():
         ]
     )
 
-    sys.excepthook = log_exception  # force unhandled exceptions to write to the log file
+    sys.excepthook = misc.log_exception  # force unhandled exceptions to write to the log file
 
-    ftp_root = get_config('rootDir')
-    ftp_archive_root = get_config('archiveRootDir')
-    exclude_dirs = get_config('skipDirs')
-    archive_days = get_config('archiveAfterDays')
+    ftp_root = misc.get_config('rootDir', CONFIG_FILE)
+    ftp_archive_root = misc.get_config('archiveRootDir', CONFIG_FILE)
+    exclude_dirs = misc.get_config('skipDirs', CONFIG_FILE)
+    archive_days = misc.get_config('archiveAfterDays', CONFIG_FILE)
     dir_list = [f for f in os.listdir(ftp_root) if os.path.isdir(os.path.join(ftp_root, f)) and f not in exclude_dirs]
 
     for ftp_user in dir_list:
