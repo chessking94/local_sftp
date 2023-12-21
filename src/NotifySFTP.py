@@ -65,12 +65,13 @@ def get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format):
 
 
 def insert_sftpfiles(conn, username, directory, filename):
+    # TODO: ensure variable 'directory' doesn't have \ characters, must only be /
     id_qry = f"SELECT DirectoryID FROM sftp.Directories WHERE DirectoryPath = '/{directory}'"
     logging.debug(id_qry)
     df = pd.read_sql(id_qry, conn)
     idval = None
     if len(df) == 0:
-        logging.critical(f"unable to locate DirectoryID for directory '{directory}'")
+        logging.critical(f"unable to locate sftp.Directories record for directory '{directory}'")
     else:
         idval = int(df.values[0][0])
 
@@ -81,7 +82,7 @@ def insert_sftpfiles(conn, username, directory, filename):
         csr.execute(insert_qry)
         conn.commit()
 
-        logging.info(f'{username}|{directory}|{filename}')
+        logging.debug(f'{username}|{directory}|{filename}')
 
 
 def get_telegramid(conn, username):
@@ -90,7 +91,7 @@ def get_telegramid(conn, username):
     df = pd.read_sql(id_qry, conn)
     rtn = None
     if len(df) == 0:
-        logging.critical(f"no record for username '{username}'")
+        logging.critical(f"unable to locate sftp.Logins record for username '{username}'")
     else:
         rtn = df.values[0][0]
     return rtn
@@ -125,7 +126,7 @@ def main():
     archive_days = get_config('archiveAfterDays')
     date_format = '%m/%d/%Y %H:%M'
 
-    conn_str = get_config('connectionString_sftpdb')
+    conn_str = get_config('connectionString_domainDB')
     DBCONN = sql.connect(conn_str)
 
     # create temp file; this will be a two column csv with the SFTP username and when the directory was last checked for files
