@@ -17,7 +17,7 @@ CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 def get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format):
     nested_dict = misc.csv_to_json(last_reviewed_filename, ',')
     user_info = nested_dict.get(ftp_user)
-    date_val = user_info.get('Last_Reviewed_Timestamp')
+    date_val = user_info.get('Last_Reviewed_Timestamp') if user_info is not None else None
     if date_val is None:
         archive_days = misc.get_config('archiveAfterDays', CONFIG_FILE)
         date_val = dt.datetime.now() - dt.timedelta(days=archive_days)  # default to number of days files can live on SFTP
