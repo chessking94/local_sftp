@@ -154,6 +154,8 @@ def main():
     # replace original user_last_reviewed.csv with temp file
     shutil.move(temp_file, last_reviewed_filename)
 
+    DBCONN.close()
+
 
 if __name__ == '__main__':
     main()
