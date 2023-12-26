@@ -1,9 +1,6 @@
-import datetime as dt
-import logging
 import os
 from pathlib import Path
 import subprocess
-import sys
 
 from automation import misc
 
@@ -12,21 +9,7 @@ CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 
 def main():
     script_name = Path(__file__).stem
-    log_root = misc.get_config('logRoot', CONFIG_FILE)
-
-    dte = dt.datetime.now().strftime('%Y%m%d%H%M%S')
-    log_name = f'{script_name}_{dte}.log'
-    log_file = os.path.join(log_root, log_name)
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s\t%(funcName)s\t%(levelname)s\t%(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-
-    sys.excepthook = misc.log_exception  # force unhandled exceptions to write to the log file
+    _ = misc.initiate_logging(script_name, CONFIG_FILE)
 
     ftp_root = misc.get_config('rootDir', CONFIG_FILE)
     ftp_archive_root = misc.get_config('archiveRootDir', CONFIG_FILE)
