@@ -5,7 +5,7 @@ import warnings
 
 from automation import misc
 import pandas as pd
-import pyodbc as sql
+import sqlalchemy as sa
 
 CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 
@@ -65,17 +65,22 @@ def main():
 
     warnings.simplefilter('ignore')
     conn_str = misc.get_config('connectionString_domainDB', CONFIG_FILE)
-    DBCONN = sql.connect(conn_str)
+    connection_url = sa.engine.URL.create(
+        drivername='mssql+pyodbc',
+        query={"odbc_connect": conn_str}
+    )
+    engine = sa.create_engine(connection_url)
+    conn = engine.connect().connection
 
     username = input('Please enter a username: ')
     firstname = input("Please enter the new user's first name: ")
     lastname = input("Please enter the new user's last name: ")
-    logintypeid = list_logintypes(DBCONN)
+    logintypeid = list_logintypes(conn)
     telegramchatid = input('If applicable, please enter the Telegram Chat ID provided by the user: ')
 
-    insert_user(DBCONN, username, firstname, lastname, logintypeid, telegramchatid)
+    insert_user(conn, username, firstname, lastname, logintypeid, telegramchatid)
 
-    DBCONN.close()
+    conn.close()
 
     # create root user directory
     user_root = f'{misc.get_config('rootDir', CONFIG_FILE)}/{username}'

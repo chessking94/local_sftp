@@ -7,8 +7,8 @@ import tempfile
 
 from automation import misc
 import pandas as pd
-import pyodbc as sql
 import requests
+import sqlalchemy as sa
 
 CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 
@@ -75,7 +75,12 @@ def main():
     date_format = '%m/%d/%Y %H:%M'
 
     conn_str = misc.get_config('connectionString_domainDB', CONFIG_FILE)
-    DBCONN = sql.connect(conn_str)
+    connection_url = sa.engine.URL.create(
+        drivername='mssql+pyodbc',
+        query={"odbc_connect": conn_str}
+    )
+    engine = sa.create_engine(connection_url)
+    conn = engine.connect().connection
 
     # create temp file; this will be a two column csv with the SFTP username and when the directory was last checked for files
     temp_file = tempfile.NamedTemporaryFile(delete=False).name
@@ -103,7 +108,7 @@ def main():
                 cde = resp.status_code
                 if cde == 200:
                     for f in incoming_files:
-                        insert_sftpfiles(conn=DBCONN, username=ftp_user, directory=incoming_name, filename=f)
+                        insert_sftpfiles(conn=conn, username=ftp_user, directory=incoming_name, filename=f)
                 else:
                     logging.error(f'Incoming File Telegram Notification Failed: Response Code {cde}')
 
@@ -116,7 +121,7 @@ def main():
         ]
         outgoing_file_ct = len(outgoing_files)
         if outgoing_file_ct > 0:
-            user_chat_id = get_telegramid(conn=DBCONN, username=ftp_user)
+            user_chat_id = get_telegramid(conn=conn, username=ftp_user)
             if user_chat_id is not None:
                 msg = f'A total of {outgoing_file_ct} new file(s) are available for download on the HuntHome SFTP and will accessible for {archive_days} days'
                 url = f'https://api.telegram.org/bot{tg_api_key}'
@@ -125,12 +130,12 @@ def main():
                     cde = resp.status_code
                     if cde == 200:
                         for f in outgoing_files:
-                            insert_sftpfiles(conn=DBCONN, username=ftp_user, directory=outgoing_name, filename=f)
+                            insert_sftpfiles(conn=conn, username=ftp_user, directory=outgoing_name, filename=f)
                     else:
                         logging.error(f'Outgoing File Telegram Notification Failed: Response Code {cde}')
             else:
                 for f in outgoing_files:
-                    insert_sftpfiles(conn=DBCONN, username=ftp_user, directory=outgoing_name, filename=f)
+                    insert_sftpfiles(conn=conn, username=ftp_user, directory=outgoing_name, filename=f)
 
         # update temp file
         with open(temp_file, mode='a', newline='', encoding='utf-8') as lr:
@@ -139,7 +144,7 @@ def main():
     # replace original user_last_reviewed.csv with temp file
     shutil.move(temp_file, last_reviewed_filename)
 
-    DBCONN.close()
+    conn.close()
 
 
 if __name__ == '__main__':
