@@ -26,11 +26,11 @@ def get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format):
     return date_val
 
 
-def insert_sftpfiles(conn, username, directory, filename):
+def insert_sftpfiles(engine, username, directory, filename):
     directory = directory.replace('\\', '/')  # ensure there's no Windows path separators, only *nix
     id_qry = f"SELECT DirectoryID FROM sftp.Directories WHERE DirectoryPath = '/{directory}'"
     logging.debug(id_qry)
-    df = pd.read_sql(id_qry, conn)
+    df = pd.read_sql(id_qry, engine)
     idval = None
     if len(df) == 0:
         logging.critical(f"unable to locate sftp.Directories record for directory '{directory}'")
@@ -38,19 +38,21 @@ def insert_sftpfiles(conn, username, directory, filename):
         idval = int(df.values[0][0])
 
     if idval is not None:
+        conn = engine.connect().connection
         csr = conn.cursor()
         insert_qry = f"INSERT INTO sftp.Files (Username, DirectoryID, Filename) VALUES ('{username}', '{idval}', '{filename}')"
         logging.debug(insert_qry)
         csr.execute(insert_qry)
         conn.commit()
+        conn.close()
 
         logging.debug(f'{username}|{directory}|{filename}')
 
 
-def get_telegramid(conn, username):
+def get_telegramid(engine, username):
     id_qry = f"SELECT TelegramChatID FROM sftp.Logins WHERE Username = '{username}'"
     logging.debug(id_qry)
-    df = pd.read_sql(id_qry, conn)
+    df = pd.read_sql(id_qry, engine)
     rtn = None
     if len(df) == 0:
         logging.critical(f"unable to locate sftp.Logins record for username '{username}'")
@@ -80,7 +82,6 @@ def main():
         query={"odbc_connect": conn_str}
     )
     engine = sa.create_engine(connection_url)
-    conn = engine.connect().connection
 
     # create temp file; this will be a two column csv with the SFTP username and when the directory was last checked for files
     temp_file = tempfile.NamedTemporaryFile(delete=False).name
@@ -108,7 +109,7 @@ def main():
                 cde = resp.status_code
                 if cde == 200:
                     for f in incoming_files:
-                        insert_sftpfiles(conn=conn, username=ftp_user, directory=incoming_name, filename=f)
+                        insert_sftpfiles(engine=engine, username=ftp_user, directory=incoming_name, filename=f)
                 else:
                     logging.error(f'Incoming File Telegram Notification Failed: Response Code {cde}')
 
@@ -121,7 +122,7 @@ def main():
         ]
         outgoing_file_ct = len(outgoing_files)
         if outgoing_file_ct > 0:
-            user_chat_id = get_telegramid(conn=conn, username=ftp_user)
+            user_chat_id = get_telegramid(engine=engine, username=ftp_user)
             if user_chat_id is not None:
                 msg = f'A total of {outgoing_file_ct} new file(s) are available for download on the HuntHome SFTP and will accessible for {archive_days} days'
                 url = f'https://api.telegram.org/bot{tg_api_key}'
@@ -130,12 +131,12 @@ def main():
                     cde = resp.status_code
                     if cde == 200:
                         for f in outgoing_files:
-                            insert_sftpfiles(conn=conn, username=ftp_user, directory=outgoing_name, filename=f)
+                            insert_sftpfiles(engine=engine, username=ftp_user, directory=outgoing_name, filename=f)
                     else:
                         logging.error(f'Outgoing File Telegram Notification Failed: Response Code {cde}')
             else:
                 for f in outgoing_files:
-                    insert_sftpfiles(conn=conn, username=ftp_user, directory=outgoing_name, filename=f)
+                    insert_sftpfiles(engine=engine, username=ftp_user, directory=outgoing_name, filename=f)
 
         # update temp file
         with open(temp_file, mode='a', newline='', encoding='utf-8') as lr:
@@ -144,7 +145,7 @@ def main():
     # replace original user_last_reviewed.csv with temp file
     shutil.move(temp_file, last_reviewed_filename)
 
-    conn.close()
+    engine.dispose()
 
 
 if __name__ == '__main__':
