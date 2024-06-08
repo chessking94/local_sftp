@@ -17,7 +17,7 @@ def list_logintypes(engine):
     logging.debug(qry)
     df = pd.read_sql(qry, engine)
     for _, data in df.iterrows():
-        prompt = f'{prompt}\n{data['LoginTypeID']} ({data['LoginType']})'
+        prompt = f"{prompt}\n{data['LoginTypeID']} ({data['LoginType']})"
         logintype_ids.append(str(data['LoginTypeID']))
 
     prompt = f'{prompt}\nYour choice: '
@@ -43,7 +43,7 @@ def insert_user(engine, username, firstname, lastname, logintypid, telegramchati
         result_msg = f"Username '{username}' already exists"
 
     if result_msg is None:
-        home_dir = f'{misc.get_config('rootDir', CONFIG_FILE)}/{username}'
+        home_dir = f"{misc.get_config('rootDir', CONFIG_FILE)}/{username}"
         telegramchatid = f"'{telegramchatid}'" if telegramchatid != '' else 'NULL'  # convert blank telegramchatid's to null
 
         # do the insert
@@ -84,7 +84,7 @@ def main():
     engine.dispose()
 
     # create root user directory
-    user_root = f'{misc.get_config('rootDir', CONFIG_FILE)}/{username}'
+    user_root = f"{misc.get_config('rootDir', CONFIG_FILE)}/{username}"
     os.mkdir(user_root)
 
     # incoming directory
