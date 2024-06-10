@@ -88,6 +88,9 @@ def main():
     with open(temp_file, mode='w', newline='', encoding='utf-8') as lr:
         lr.write('"SFTP_User","Last_Reviewed_Timestamp"\n')
 
+    if not os.path.isfile(last_reviewed_filename):
+        shutil.copy(temp_file, last_reviewed_filename)
+
     for ftp_user in dir_list:
         user_dir = os.path.join(ftp_root, ftp_user)
         last_reviewed = get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format)
