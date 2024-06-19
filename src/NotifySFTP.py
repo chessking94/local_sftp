@@ -105,7 +105,7 @@ def main():
         ]
         incoming_file_ct = len(incoming_files)
         if incoming_file_ct > 0:
-            msg = f'A total of {incoming_file_ct} new file(s) have been uploaded to the HuntHome SFTP by user {ftp_user}'
+            msg = f'New SFTP Files: A total of {incoming_file_ct} new file(s) have been uploaded to the HuntHome SFTP by user {ftp_user}'
             url = f'https://api.telegram.org/bot{tg_api_key}'
             params = {'chat_id': tg_id, 'text': msg}
             with requests.post(url + '/sendMessage', params=params) as resp:
@@ -127,7 +127,7 @@ def main():
         if outgoing_file_ct > 0:
             user_chat_id = get_telegramid(engine=engine, username=ftp_user)
             if user_chat_id is not None:
-                msg = f'A total of {outgoing_file_ct} new file(s) are available for download on the HuntHome SFTP and will accessible for {archive_days} days'
+                msg = f'SFTP Files: A total of {outgoing_file_ct} new file(s) are available for download on the HuntHome SFTP and will accessible for {archive_days} days'
                 url = f'https://api.telegram.org/bot{tg_api_key}'
                 params = {'chat_id': user_chat_id, 'text': msg}
                 with requests.post(url + '/sendMessage', params=params) as resp:
