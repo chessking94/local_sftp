@@ -72,4 +72,11 @@ fi
 sudo service ssh restart
 echo "SSH service restarted."
 
+# ensure PWD is the directory of this file, in case of symlinks
+BASE_FILE="$(readlink -f "$0")"
+SCRIPT_DIR="$(dirname "$BASE_FILE")"
+if [ "$PWD" != "$SCRIPT_DIR" ]; then
+    cd "$SCRIPT_DIR"
+fi
+
 python3 SftpUserLinux.py --process "CREATE" --username "$username" --firstname "$firstname" --lastname "$lastname" --telegramid "$telegramid"

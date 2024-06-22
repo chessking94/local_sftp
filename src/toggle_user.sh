@@ -30,6 +30,13 @@ if id "$username" &>/dev/null; then
     # Prompt to disable or re-enable the user
     read -p "Do you want to disable or re-enable the user '$username'? (disable/enable): " action
 
+    # ensure PWD is the directory of this file, in case of symlinks
+    BASE_FILE="$(readlink -f "$0")"
+    SCRIPT_DIR="$(dirname "$BASE_FILE")"
+    if [ "$PWD" != "$SCRIPT_DIR" ]; then
+        cd "$SCRIPT_DIR"
+    fi
+
     case "$action" in
         "disable")
             disable_user "$username"

@@ -24,6 +24,13 @@ if id "$username" &>/dev/null; then
 	sudo deluser -r "$username"
     echo "User '$username' has been deleted."
 
+    # ensure PWD is the directory of this file, in case of symlinks
+    BASE_FILE="$(readlink -f "$0")"
+    SCRIPT_DIR="$(dirname "$BASE_FILE")"
+    if [ "$PWD" != "$SCRIPT_DIR" ]; then
+        cd "$SCRIPT_DIR"
+    fi
+
     python3 SftpUserLinux.py --process "DELETE" --username "$username"
 else
     echo "User '$username' does not exist."
