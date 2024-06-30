@@ -2,8 +2,6 @@ import datetime as dt
 import logging
 import os
 from pathlib import Path
-import shutil
-import tempfile
 
 from automation import misc
 import pandas as pd
@@ -13,17 +11,29 @@ import sqlalchemy as sa
 CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 
 
-def get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format):
-    nested_dict = misc.csv_to_json(last_reviewed_filename, ',')
-    user_info = nested_dict.get(ftp_user)
-    date_val = user_info.get('Last_Reviewed_Timestamp') if user_info is not None else None
-    if date_val is None:
-        archive_days = misc.get_config('archiveAfterDays', CONFIG_FILE)
-        date_val = dt.datetime.now() - dt.timedelta(days=archive_days)  # default to number of days files can live on SFTP
+def get_last_reviewed_timestamp(engine, ftp_user):
+    qry = f"SELECT LastMonitored FROM sftp.Logins WHERE Username = '{ftp_user}'"
+    logging.debug(qry)
+    df = pd.read_sql(qry, engine)
+    if len(df) == 0:
+        logging.critical(f"unable to locate sftp.Logins record for login '{ftp_user}'")
     else:
-        date_val = dt.datetime.strptime(date_val, date_format)
+        dte = df.values[0][0]
+        date_val = pd.to_datetime(dte).to_pydatetime()
 
     return date_val
+
+
+def set_last_reviewed_timestamp(engine, ftp_user, dte):
+    dtefmt = dte.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+
+    conn = engine.connect().connection
+    csr = conn.cursor()
+    insert_qry = f"UPDATE sftp.Logins SET LastMonitored = '{dtefmt}' WHERE Username = '{ftp_user}'"
+    logging.debug(insert_qry)
+    csr.execute(insert_qry)
+    conn.commit()
+    conn.close()
 
 
 def insert_sftpfiles(engine, username, directory, filename):
@@ -58,6 +68,7 @@ def get_telegramid(engine, username):
         logging.critical(f"unable to locate sftp.Logins record for username '{username}'")
     else:
         rtn = df.values[0][0]
+
     return rtn
 
 
@@ -68,13 +79,11 @@ def main():
     ftp_root = misc.get_config('rootDir', CONFIG_FILE)
     exclude_dirs = misc.get_config('skipDirs', CONFIG_FILE)
     dir_list = [f for f in os.listdir(ftp_root) if os.path.isdir(os.path.join(ftp_root, f)) and f not in exclude_dirs]
-    last_reviewed_filename = os.path.join(Path(__file__).parents[1], misc.get_config('userLastReviewedName', CONFIG_FILE))
     incoming_name = misc.get_config('incomingDir', CONFIG_FILE)
     outgoing_name = misc.get_config('outgoingDir', CONFIG_FILE)
     tg_api_key = misc.get_config('telegramAPIKey', CONFIG_FILE)
     tg_id = misc.get_config('telegramID', CONFIG_FILE)
     archive_days = misc.get_config('archiveAfterDays', CONFIG_FILE)
-    date_format = '%m/%d/%Y %H:%M'
 
     conn_str = misc.get_config('connectionString_domainDB', CONFIG_FILE)
     connection_url = sa.engine.URL.create(
@@ -83,17 +92,9 @@ def main():
     )
     engine = sa.create_engine(connection_url)
 
-    # create temp file; this will be a two column csv with the SFTP username and when the directory was last checked for files
-    temp_file = tempfile.NamedTemporaryFile(delete=False).name
-    with open(temp_file, mode='w', newline='', encoding='utf-8') as lr:
-        lr.write('"SFTP_User","Last_Reviewed_Timestamp"\n')
-
-    if not os.path.isfile(last_reviewed_filename):
-        shutil.copy(temp_file, last_reviewed_filename)
-
     for ftp_user in dir_list:
         user_dir = os.path.join(ftp_root, ftp_user)
-        last_reviewed = get_last_reviewed_timestamp(last_reviewed_filename, ftp_user, date_format)
+        last_reviewed = get_last_reviewed_timestamp(engine, ftp_user)
         new_reviewed = dt.datetime.now()
 
         # incoming files to the SFTP server
@@ -141,12 +142,8 @@ def main():
                 for f in outgoing_files:
                     insert_sftpfiles(engine=engine, username=ftp_user, directory=outgoing_name, filename=f)
 
-        # update temp file
-        with open(temp_file, mode='a', newline='', encoding='utf-8') as lr:
-            lr.write(f'"{ftp_user}","{dt.datetime.strftime(new_reviewed, date_format)}"\n')
-
-    # replace original user_last_reviewed.csv with temp file
-    shutil.move(temp_file, last_reviewed_filename)
+        # update database
+        set_last_reviewed_timestamp(engine, ftp_user, new_reviewed)
 
     engine.dispose()
 

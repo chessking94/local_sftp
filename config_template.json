@@ -6,7 +6,6 @@
     "archiveAfterDays": 3,
     "incomingDir": "Incoming",
     "outgoingDir": "Outgoing",
-	"userLastReviewedName": "user_last_reviewed.csv",
     "telegramAPIKey": "1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ",
     "telegramID": "9876543210",
     "connectionString_domainDB": "Driver={ODBC Driver 17 for SQL Server};Server=localhost;Database=domainDB;UID=username;PWD=password;"
