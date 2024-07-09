@@ -6,8 +6,9 @@ STATE_FILE="/var/log/auth_grep_state"
 OUTPUT_DIR="/sftp/eehunt/FromHuntHome"
 
 # Get the current timestamp
+HOSTNAME=$(hostname)
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-OUTPUT_FILE="${OUTPUT_DIR}/sshd_log_${TIMESTAMP}.txt"
+OUTPUT_FILE="${OUTPUT_DIR}/${HOSTNAME}_sshd_grep_${TIMESTAMP}.txt"
 
 # Get the last processed line number from the state file
 if [ ! -f "$STATE_FILE" ]; then
