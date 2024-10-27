@@ -56,8 +56,8 @@ if [ -d "/sftp" ]; then
     echo "Directories created for user '$username'."
 
     # set admin permissions
-    sudo chown -R root:ftp_admin "/sftp/$username"
-    sudo chmod 775 "/sftp/$username"
+    sudo chown -R root:ftp03-sudo@stacy.hunthome.dev "/sftp/$username"
+    sudo chmod 755 "/sftp/$username"
 
     # Set permissions for the directories; this will only allow user to interact with files in the To and From directories
 	sudo chmod 777 "/sftp/$username/ToHuntHome"
