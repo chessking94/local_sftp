@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from automation import misc
+from Utilities_Python import misc
 
 CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 

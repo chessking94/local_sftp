@@ -3,17 +3,17 @@ import logging
 import os
 from pathlib import Path
 
-from automation import misc
 import pandas as pd
 import requests
 import sqlalchemy as sa
+from Utilities_Python import misc
 
 CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 
 
 def get_last_reviewed_timestamp(engine, ftp_user):
     date_val = None
-    qry = f"SELECT Active, LastMonitored FROM sftp.Logins WHERE Username = '{ftp_user}'"
+    qry = f"SELECT Active, LastMonitored FROM HuntHome.sftp.Logins WHERE Username = '{ftp_user}'"
     logging.debug(qry)
     df = pd.read_sql(qry, engine)
     if len(df) == 0:
@@ -31,7 +31,7 @@ def set_last_reviewed_timestamp(engine, ftp_user, dte):
 
     conn = engine.connect().connection
     csr = conn.cursor()
-    insert_qry = f"UPDATE sftp.Logins SET LastMonitored = '{dtefmt}' WHERE Username = '{ftp_user}'"
+    insert_qry = f"UPDATE HuntHome.sftp.Logins SET LastMonitored = '{dtefmt}' WHERE Username = '{ftp_user}'"
     logging.debug(insert_qry)
     csr.execute(insert_qry)
     conn.commit()
@@ -40,7 +40,7 @@ def set_last_reviewed_timestamp(engine, ftp_user, dte):
 
 def insert_sftpfiles(engine, username, directory, filename):
     directory = directory.replace('\\', '/')  # ensure there's no Windows path separators, only *nix
-    id_qry = f"SELECT DirectoryID FROM sftp.Directories WHERE DirectoryPath = '/{directory}'"
+    id_qry = f"SELECT DirectoryID FROM HuntHome.sftp.Directories WHERE DirectoryPath = '/{directory}'"
     logging.debug(id_qry)
     df = pd.read_sql(id_qry, engine)
     idval = None
@@ -52,7 +52,7 @@ def insert_sftpfiles(engine, username, directory, filename):
     if idval is not None:
         conn = engine.connect().connection
         csr = conn.cursor()
-        insert_qry = f"INSERT INTO sftp.Files (Username, DirectoryID, Filename) VALUES ('{username}', '{idval}', '{filename}')"
+        insert_qry = f"INSERT INTO HuntHome.sftp.Files (Username, DirectoryID, Filename) VALUES ('{username}', '{idval}', '{filename}')"
         logging.debug(insert_qry)
         csr.execute(insert_qry)
         conn.commit()
@@ -62,7 +62,7 @@ def insert_sftpfiles(engine, username, directory, filename):
 
 
 def get_telegramid(engine, username):
-    id_qry = f"SELECT TelegramChatID FROM sftp.Logins WHERE Username = '{username}'"
+    id_qry = f"SELECT TelegramChatID FROM HuntHome.sftp.Logins WHERE Username = '{username}'"
     logging.debug(id_qry)
     df = pd.read_sql(id_qry, engine)
     rtn = None
@@ -87,7 +87,7 @@ def main():
     tg_id = misc.get_config('telegramID', CONFIG_FILE)
     archive_days = misc.get_config('archiveAfterDays', CONFIG_FILE)
 
-    conn_str = misc.get_config('connectionString_domainDB', CONFIG_FILE)
+    conn_str = misc.get_config('connectionString_domainDB', CONFIG_FILE)  # TODO: figure out how to migrate this to env vars instead of config, harder since it runs on Linux
     connection_url = sa.engine.URL.create(
         drivername='mssql+pyodbc',
         query={"odbc_connect": conn_str}
