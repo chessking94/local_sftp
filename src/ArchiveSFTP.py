@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import subprocess
 
-from Utilities_Python import misc
+from Utilities_Python import misc, notifications
 
 CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 
@@ -13,6 +13,12 @@ def main():
 
     ftp_root = misc.get_config('rootDir', CONFIG_FILE)
     ftp_archive_root = misc.get_config('archiveRootDir', CONFIG_FILE)
+
+    result = subprocess.run(f'dir {ftp_archive_root}', shell=True, capture_output=True)
+    if result.returncode != 0:
+        notifications.SendTelegramMessage('ArchiveSFTP: Unable to access remote backup directory')
+        raise SystemExit()
+
     exclude_dirs = misc.get_config('skipDirs', CONFIG_FILE)
     archive_days = misc.get_config('archiveAfterDays', CONFIG_FILE)
     dir_list = [f for f in os.listdir(ftp_root) if os.path.isdir(os.path.join(ftp_root, f)) and f not in exclude_dirs]
