@@ -14,8 +14,7 @@ def main():
     ftp_root = misc.get_config('rootDir', CONFIG_FILE)
     ftp_archive_root = misc.get_config('archiveRootDir', CONFIG_FILE)
 
-    result = subprocess.run(f'dir {ftp_archive_root}', shell=True, capture_output=True)
-    if result.returncode != 0:
+    if not os.path.exists(ftp_archive_root):
         notifications.SendTelegramMessage('ArchiveSFTP: Unable to access remote backup directory')
         raise SystemExit()
 
