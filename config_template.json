@@ -1,12 +1,10 @@
 {
-    "logRoot": "C:/logs",
-    "rootDir": "F:/root",
-    "archiveRootDir": "G:/Archive",
+    "logRoot": "$(PYTHON_LOG_ROOT)",
+    "rootDir": "$(SFTP_ROOT)",
+    "archiveRootDir": "$(ARCHIVE_ROOT)",
     "skipDirs": ["$RECYCLE.BIN", "System Volume Information", "zINACTIVE"],
-    "archiveAfterDays": 3,
-    "incomingDir": "Incoming",
-    "outgoingDir": "Outgoing",
-    "telegramAPIKey": "1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    "telegramID": "9876543210",
-    "connectionString_domainDB": "Driver={ODBC Driver 17 for SQL Server};Server=localhost;Database=domainDB;UID=username;PWD=password;"
+    "archiveAfterDays": "$(ARCHIVE_AFTER_DAYS)",
+    "incomingDir": "$(INCOMING_DIR_NAME)",
+    "outgoingDir": "$(OUTGOING_DIR_NAME)",
+    "connectionString_domainDB": "(only used in non-pipeline)"
 }

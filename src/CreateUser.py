@@ -67,10 +67,10 @@ def main():
     _ = misc.initiate_logging(script_name, CONFIG_FILE)
 
     warnings.simplefilter('ignore')
-    conn_str = misc.get_config('connectionString_domainDB', CONFIG_FILE)
+    conn_str = misc.get_config('connectionString_domainDB', CONFIG_FILE)  # TODO: want to get rid of this but it's on an Ubuntu box...
     connection_url = sa.engine.URL.create(
         drivername='mssql+pyodbc',
-        query={"odbc_connect": conn_str}
+        query={'odbc_connect': conn_str}
     )
     engine = sa.create_engine(connection_url)
 

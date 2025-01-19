@@ -1,6 +1,7 @@
-.venv
-.vscode
+# directories
 __pycache__
+.venv/
+.vscode/
+
+# files
 config.json
-test.py
-user_last_reviewed.csv

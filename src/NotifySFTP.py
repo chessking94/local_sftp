@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 import sqlalchemy as sa
-from Utilities_Python import misc
+from Utilities_Python import misc, notifications
 
 CONFIG_FILE = os.path.join(Path(__file__).parents[1], 'config.json')
 
@@ -83,14 +83,12 @@ def main():
     dir_list = [f for f in os.listdir(ftp_root) if os.path.isdir(os.path.join(ftp_root, f)) and f not in exclude_dirs]
     incoming_name = misc.get_config('incomingDir', CONFIG_FILE)
     outgoing_name = misc.get_config('outgoingDir', CONFIG_FILE)
-    tg_api_key = misc.get_config('telegramAPIKey', CONFIG_FILE)
-    tg_id = misc.get_config('telegramID', CONFIG_FILE)
     archive_days = misc.get_config('archiveAfterDays', CONFIG_FILE)
 
-    conn_str = misc.get_config('connectionString_domainDB', CONFIG_FILE)  # TODO: figure out how to migrate this to env vars instead of config, harder since it runs on Linux
+    conn_str = os.getenv('ConnectionStringOdbcRelease')
     connection_url = sa.engine.URL.create(
         drivername='mssql+pyodbc',
-        query={"odbc_connect": conn_str}
+        query={'odbc_connect': conn_str}
     )
     engine = sa.create_engine(connection_url)
 
@@ -111,16 +109,11 @@ def main():
             ]
             incoming_file_ct = len(incoming_files)
             if incoming_file_ct > 0:
+                for f in incoming_files:
+                    insert_sftpfiles(engine=engine, username=ftp_user, directory=incoming_name, filename=f)
+
                 msg = f'New SFTP Files: A total of {incoming_file_ct} new file(s) have been uploaded to the HuntHome SFTP by user {ftp_user}'
-                url = f'https://api.telegram.org/bot{tg_api_key}'
-                params = {'chat_id': tg_id, 'text': msg}
-                with requests.post(url + '/sendMessage', params=params) as resp:
-                    cde = resp.status_code
-                    if cde == 200:
-                        for f in incoming_files:
-                            insert_sftpfiles(engine=engine, username=ftp_user, directory=incoming_name, filename=f)
-                    else:
-                        logging.error(f'Incoming File Telegram Notification Failed: Response Code {cde}')
+                notifications.SendTelegramMessage(msg)
 
             # outgoing files to the SFTP server
             outgoing_dir = os.path.join(user_dir, outgoing_name)
@@ -131,21 +124,23 @@ def main():
             ]
             outgoing_file_ct = len(outgoing_files)
             if outgoing_file_ct > 0:
+                for f in outgoing_files:
+                    insert_sftpfiles(engine=engine, username=ftp_user, directory=outgoing_name, filename=f)
+
                 user_chat_id = get_telegramid(engine=engine, username=ftp_user)
                 if user_chat_id is not None:
-                    msg = f'SFTP Files: A total of {outgoing_file_ct} new file(s) are available for download on the HuntHome SFTP and will accessible for {archive_days} days'
-                    url = f'https://api.telegram.org/bot{tg_api_key}'
-                    params = {'chat_id': user_chat_id, 'text': msg}
-                    with requests.post(url + '/sendMessage', params=params) as resp:
-                        cde = resp.status_code
-                        if cde == 200:
-                            for f in outgoing_files:
-                                insert_sftpfiles(engine=engine, username=ftp_user, directory=outgoing_name, filename=f)
-                        else:
-                            logging.error(f'Outgoing File Telegram Notification Failed: Response Code {cde}')
-                else:
-                    for f in outgoing_files:
-                        insert_sftpfiles(engine=engine, username=ftp_user, directory=outgoing_name, filename=f)
+                    tg_api_key = os.getenv('TelegramAPIKeyRelease')
+                    if tg_api_key is None:
+                        logging.error('Missing TelegramAPIKey environment variable')
+                    else:
+                        # TODO: replace this with something in Utilities when it is built out
+                        msg = f'SFTP Files: A total of {outgoing_file_ct} new file(s) are available for download on the HuntHome SFTP and will accessible for {archive_days} days'
+                        url = f'https://api.telegram.org/bot{tg_api_key}'
+                        params = {'chat_id': user_chat_id, 'text': msg}
+                        with requests.post(url + '/sendMessage', params=params) as resp:
+                            cde = resp.status_code
+                            if cde != 200:
+                                logging.error(f'Outgoing File Telegram Notification Failed: Response Code {cde}')
 
             # update database
             set_last_reviewed_timestamp(engine, ftp_user, new_reviewed)
